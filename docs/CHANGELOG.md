@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - [修复] 修正分析 API 对北交所 `BJ` 前缀与 `.BJ` 后缀股票代码的校验，保持前端自动补全与 Tushare `ts_code` 调用格式一致。
 - [修复] 大盘复盘“近三日催化线索”改为明确展示摘要片段、来源日期和 URL，避免把搜索摘要截断内容误呈现为完整事件。
 - [新功能] Web 首页新增“大盘复盘”按钮，通过 `POST /api/v1/analysis/market-review` 后台触发复盘并沿用通知配置。
+- [修复] 明确 `POST /api/v1/analysis/market-review` 的配置复用与锁语义：复用现有 Analyzer/SearchService 装配逻辑，仅提供进程内防重，跨实例多容器场景需外部幂等机制；并同步 `full-guide*` 说明与契约测试断言。
 
 ## [3.15.0] - 2026-05-05
 

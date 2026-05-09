@@ -107,7 +107,13 @@ def _write_market_review_lock_metadata(handle: Any) -> None:
 def _try_acquire_market_review_lock(
     config: Config,
 ) -> Optional[_MarketReviewExecutionLock]:
-    """Acquire an in-process and cross-process market-review execution lock."""
+    """Acquire a single-process and same-host lock for market-review execution.
+
+    Note:
+        The lock is process-local and file-based (same host only). It does
+        not provide cross-host/container dedupe when Web/API is deployed in
+        multiple runtime instances.
+    """
     global _market_review_running
     lock_path = _market_review_lock_path(config)
 
@@ -218,7 +224,7 @@ def _build_market_review_runtime(config: Config) -> tuple[Any, Any, Any]:
 
     analyzer = None
     if getattr(config, "gemini_api_key", None) or getattr(config, "openai_api_key", None):
-        analyzer = GeminiAnalyzer(api_key=getattr(config, "gemini_api_key", None))
+        analyzer = GeminiAnalyzer(config=config)
         if not analyzer.is_available():
             logger.warning("AI 分析器初始化后不可用，请检查 API Key 配置")
             analyzer = None
@@ -588,7 +594,7 @@ def _handle_sync_analysis(
         500: {"description": "提交失败", "model": ErrorResponse},
     },
     summary="触发大盘复盘",
-    description="提交一个后台大盘复盘任务，复用 CLI 的大盘复盘链路并保存报告。",
+    description="提交一个后台大盘复盘任务，复用 CLI 的大盘复盘链路并保存报告。接口内部仅提供进程内/单机防重，如多实例（多 Worker/多容器）部署，需结合外部幂等机制避免重复触发。",
 )
 def trigger_market_review(
     background_tasks: BackgroundTasks,

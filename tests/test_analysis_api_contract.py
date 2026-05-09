@@ -173,7 +173,7 @@ class AnalysisApiContractTestCase(unittest.TestCase):
             news_max_age_days=5,
             news_strategy_profile="balanced",
         )
-        analyzer_cls.assert_called_once_with(api_key="gemini-key")
+        analyzer_cls.assert_called_once_with(config=config)
         run_market_review.assert_called_once_with(
             notifier=notifier_cls.return_value,
             analyzer=analyzer_cls.return_value,
