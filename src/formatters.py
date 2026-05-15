@@ -615,7 +615,7 @@ def slice_at_max_bytes(text: str, max_bytes: int) -> tuple[str, str]:
     return truncated, text[len(truncated):]
 
 
-def format_feishu_markdown(content: str) -> str:
+def format_feishu_markdown(content: str, *, fence_tables: bool = False) -> str:
     """
     将通用 Markdown 转换为飞书 lark_md 更友好的格式
     
@@ -624,9 +624,11 @@ def format_feishu_markdown(content: str) -> str:
     - 引用块尽量保留 Markdown 引用语义
     - 分隔线统一为细线
     - 表格转换为等宽文本表，避免字段被拍平成散乱条目
+    - 可选将表格包进代码块，仅用于不会再次通用分片的文本 fallback
     
     Args:
         content: 原始 Markdown 内容
+        fence_tables: 是否用 Markdown 代码围栏包裹表格文本
         
     Returns:
         转换后的飞书 Markdown 格式内容
@@ -637,10 +639,8 @@ def format_feishu_markdown(content: str) -> str:
         >>> print(formatted)
         **标题**
         > 引用
-        ```
         列1  列2
         值1  值2
-        ```
     """
     def _display_width(value: str) -> int:
         """Return a rough terminal/card display width for mixed CJK text."""
@@ -683,10 +683,12 @@ def format_feishu_markdown(content: str) -> str:
             for idx in range(max_cols)
         ]
 
-        output.append("```")
+        if fence_tables:
+            output.append("```")
         for row in normalized_rows:
             output.append("  ".join(_pad_cell(cell, col_widths[idx]) for idx, cell in enumerate(row)).rstrip())
-        output.append("```")
+        if fence_tables:
+            output.append("```")
 
     lines = []
     table_buffer: List[str] = []

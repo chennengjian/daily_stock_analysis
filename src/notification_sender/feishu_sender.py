@@ -304,4 +304,4 @@ class FeishuSender:
 
         # 2) 回退为普通文本消息。回退格式可能比原始 Markdown 更长，
         # 发送前按真实回退文本重新校验并必要时分片。
-        return _send_fallback_text(format_feishu_markdown(content))
+        return _send_fallback_text(format_feishu_markdown(content, fence_tables=True))

@@ -291,7 +291,7 @@ class TestFeishuSender(unittest.TestCase):
         result = sender.send_to_feishu("short")
 
         self.assertTrue(result)
-        mock_format.assert_called_once_with("short")
+        mock_format.assert_called_once_with("short", fence_tables=True)
         self.assertGreater(mock_post.call_count, 2)
         self.assertEqual(mock_post.call_args_list[0].kwargs["json"]["msg_type"], "interactive")
         for call in mock_post.call_args_list[1:]:

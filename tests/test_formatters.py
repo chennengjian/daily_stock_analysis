@@ -219,7 +219,7 @@ class TestChunkContentByMaxBytes(unittest.TestCase):
 class TestFeishuMarkdownFormatter(unittest.TestCase):
     """Tests for Feishu lark_md compatible formatting."""
 
-    def test_markdown_table_becomes_aligned_code_block(self):
+    def test_markdown_table_becomes_aligned_text_without_fence_by_default(self):
         content = """### 盘面温度
 
 | 指标 | 数值 | 观察 |
@@ -229,10 +229,21 @@ class TestFeishuMarkdownFormatter(unittest.TestCase):
         result = format_feishu_markdown(content)
 
         self.assertIn("**盘面温度**", result)
-        self.assertIn("```", result)
+        self.assertNotIn("```", result)
         self.assertIn("指标", result)
         self.assertIn("上涨/下跌", result)
         self.assertNotIn("• 指标：", result)
+
+    def test_markdown_table_can_be_fenced_for_text_fallback(self):
+        content = """| 指标 | 数值 |
+|------|------|
+| 涨停 | 125 |
+"""
+        result = format_feishu_markdown(content, fence_tables=True)
+
+        self.assertIn("```", result)
+        self.assertIn("指标", result)
+        self.assertIn("涨停", result)
 
     def test_markdown_table_fallback_preserves_long_cell_text(self):
         long_rationale = "放量突破年线后回踩确认，继续观察成交量和行业催化是否延续"

@@ -64,6 +64,30 @@ def test_reply_text_chunked_keeps_reply_and_at_user(monkeypatch):
         assert call["user_id"] == user_id
 
 
+def test_reply_text_chunked_table_does_not_send_code_fence_fragments(monkeypatch):
+    import bot.platforms.feishu_stream as feishu_stream
+    from src.formatters import format_feishu_markdown
+
+    monkeypatch.setattr(feishu_stream, "format_feishu_markdown", format_feishu_markdown)
+    client = DummyFeishuReplyClient(max_bytes=120)
+    rows = "\n".join(
+        f"| 数据{index:02d} | 观察内容较长用于触发分片{index:02d} |"
+        for index in range(1, 8)
+    )
+    text = f"""### 盘面温度
+
+| 指标 | 观察 |
+| --- | --- |
+{rows}
+"""
+
+    result = client.reply_text(message_id="msg_table", text=text)
+
+    assert result is True
+    assert len(client.calls) >= 2
+    assert all("```" not in call["content"] for call in client.calls)
+
+
 def test_send_to_chat_chunked_uses_chat_id(monkeypatch):
     client = DummyFeishuReplyClient(max_bytes=1000)
 
@@ -81,4 +105,3 @@ def test_send_to_chat_chunked_uses_chat_id(monkeypatch):
         assert call["receive_id_type"] == "chat_id"
         assert call["at_user"] is False
         assert call["user_id"] is None
-
