@@ -94,15 +94,25 @@ class HistoryService:
             add(raw_code)
             return candidates
 
+        def add_hk_variants(digits: str) -> None:
+            if not digits or not digits.isdigit():
+                return
+
+            normalized_digits = digits.zfill(5)
+            add(f"HK{normalized_digits}")
+            add(f"{normalized_digits}.HK")
+
+            unpadded_digits = digits.lstrip("0")
+            if unpadded_digits:
+                add(f"{unpadded_digits}.HK")
+
         add(raw_canonical)
         add(normalized)
 
         if normalized.startswith("HK") and normalized[2:].isdigit():
-            add(f"{normalized[2:].zfill(5)}.HK")
+            add_hk_variants(normalized[2:])
         elif normalized.isdigit() and len(normalized) == 5:
-            hk_code = normalized.zfill(5)
-            add(f"HK{hk_code}")
-            add(f"{hk_code}.HK")
+            add_hk_variants(normalized)
         elif normalized.isdigit() and len(normalized) == 6:
             exchange = None
             if is_bse_code(normalized):

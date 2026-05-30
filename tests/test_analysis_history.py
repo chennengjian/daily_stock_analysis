@@ -371,6 +371,44 @@ class AnalysisHistoryTestCase(unittest.TestCase):
             {"00700.HK", "HK00700"},
         )
 
+    def test_history_list_matches_unpadded_hk_suffix_variants(self) -> None:
+        """HK short suffix forms (e.g. 1810.HK) should match 5-digit canonical suffix/prefix forms."""
+
+        def save_record(code: str, query_id: str) -> None:
+            result = self._build_result()
+            result.code = code
+            if "HK" in code:
+                result.name = "腾讯控股"
+            saved = self.db.save_analysis_history(
+                result=result,
+                query_id=query_id,
+                report_type="simple",
+                news_content="新闻摘要",
+                context_snapshot=None,
+                save_snapshot=False,
+            )
+            self.assertEqual(saved, 1)
+
+        save_record("1810.HK", "query_hk_unpadded")
+        save_record("01810.HK", "query_hk_padded")
+        save_record("HK01810", "query_hk_prefix")
+
+        service = HistoryService(self.db)
+
+        hk_from_suffix = service.get_history_list(stock_code="01810.HK", page=1, limit=10)
+        self.assertEqual(hk_from_suffix["total"], 3)
+        self.assertEqual(
+            {item["stock_code"] for item in hk_from_suffix["items"]},
+            {"1810.HK", "01810.HK", "HK01810"},
+        )
+
+        hk_from_prefix = service.get_history_list(stock_code="HK01810", page=1, limit=10)
+        self.assertEqual(hk_from_prefix["total"], 3)
+        self.assertEqual(
+            {item["stock_code"] for item in hk_from_prefix["items"]},
+            {"1810.HK", "01810.HK", "HK01810"},
+        )
+
     def test_history_detail_preserves_zero_change_pct(self) -> None:
         """change_pct=0.0（平盘）应原样返回，而不是被当成缺失值丢失。
 

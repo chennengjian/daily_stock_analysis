@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { analysisApi, DuplicateTaskError } from '../../api/analysis';
 import { historyApi } from '../../api/history';
 import type { TaskInfo, TaskListResponse } from '../../types/analysis';
+import { getRecentStartDate, getTodayInShanghai } from '../../utils/format';
 import { useStockPoolStore } from '../stockPoolStore';
 
 vi.mock('../../api/history', () => ({
@@ -155,6 +156,95 @@ describe('stockPoolStore', () => {
     expect(historyApi.getList).toHaveBeenLastCalledWith({
       stockCode: '600519',
       page: 2,
+      limit: 20,
+    });
+  });
+
+  it('deduplicates same-stock trend records when loading more pages', async () => {
+    const duplicateCurrentItem = {
+      ...historyItem,
+      id: 1,
+      queryId: 'q-1',
+    };
+    const olderPageItem = {
+      ...historyItem,
+      id: 2,
+      queryId: 'q-2',
+      modelUsed: 'gemini/gemini-2.5-pro',
+    };
+    const thirdItem = {
+      ...historyItem,
+      id: 3,
+      queryId: 'q-3',
+      modelUsed: 'gemini/gemini-2.5-flash',
+    };
+
+    useStockPoolStore.setState({ selectedReport: historyReport });
+    vi.mocked(historyApi.getList)
+      .mockResolvedValueOnce({
+        total: 3,
+        page: 1,
+        limit: 20,
+        items: [olderPageItem],
+      })
+      .mockResolvedValueOnce({
+        total: 3,
+        page: 2,
+        limit: 20,
+        items: [duplicateCurrentItem, thirdItem],
+      });
+
+    await useStockPoolStore.getState().openHistoryTrend();
+    await useStockPoolStore.getState().loadMoreStockHistory();
+
+    const state = useStockPoolStore.getState();
+    expect(state.stockHistoryItems.map((item) => item.id)).toEqual([1, 2, 3]);
+  });
+
+  it('does not inject the current report when it is outside the selected history time range', async () => {
+    const oldSelectedReport = {
+      ...historyReport,
+      meta: {
+        ...historyReport.meta,
+        id: 5,
+        queryId: 'q-old',
+        createdAt: '2020-01-01T08:00:00Z',
+      },
+    };
+
+    useStockPoolStore.setState({
+      selectedReport: oldSelectedReport,
+      stockHistoryFilters: {
+        range: '30d',
+        model: 'all',
+        sort: 'desc',
+      },
+    });
+    vi.mocked(historyApi.getList).mockResolvedValue({
+      total: 1,
+      page: 1,
+      limit: 20,
+      items: [
+        {
+          ...historyItem,
+          id: 6,
+          queryId: 'q-in-range',
+          createdAt: '2026-03-18T08:00:00Z',
+        },
+      ],
+    });
+
+    await useStockPoolStore.getState().openHistoryTrend();
+
+    const state = useStockPoolStore.getState();
+    expect(state.stockHistoryItems).toHaveLength(1);
+    expect(state.stockHistoryItems[0].id).toBe(6);
+    expect(state.stockHistoryItems[0].id).not.toBe(5);
+    expect(historyApi.getList).toHaveBeenCalledWith({
+      stockCode: '600519',
+      startDate: getRecentStartDate(30),
+      endDate: getTodayInShanghai(),
+      page: 1,
       limit: 20,
     });
   });

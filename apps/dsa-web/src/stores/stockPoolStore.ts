@@ -179,12 +179,42 @@ function reportToHistoryItem(report: AnalysisReport): HistoryItem | null {
   };
 }
 
-function includeSelectedReport(items: HistoryItem[], report: AnalysisReport): HistoryItem[] {
+function isDateInHistoryRange(createdAt: string | undefined, range: StockHistoryRange): boolean {
+  if (range === 'all') {
+    return true;
+  }
+  if (!createdAt) {
+    return false;
+  }
+
+  const reportDate = createdAt.slice(0, 10);
+  const startDate = range === '30d' ? getRecentStartDate(30) : getRecentStartDate(90);
+  const endDate = getTodayInShanghai();
+
+  return reportDate >= startDate && reportDate <= endDate;
+}
+
+function includeSelectedReport(
+  items: HistoryItem[],
+  report: AnalysisReport,
+  range: StockHistoryRange,
+): HistoryItem[] {
   const current = reportToHistoryItem(report);
-  if (!current || items.some((item) => item.id === current.id)) {
+  if (!current || !isDateInHistoryRange(current.createdAt, range) || items.some((item) => item.id === current.id)) {
     return items;
   }
   return [current, ...items];
+}
+
+function dedupeHistoryItems(items: HistoryItem[]): HistoryItem[] {
+  const seen = new Set<number>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
 }
 
 async function fetchStockHistory(
@@ -226,8 +256,8 @@ async function fetchStockHistory(
     }
 
     const nextItems = reset
-      ? includeSelectedReport(response.items, report)
-      : [...get().stockHistoryItems, ...response.items];
+      ? dedupeHistoryItems(includeSelectedReport(response.items, report, state.stockHistoryFilters.range))
+      : dedupeHistoryItems([...get().stockHistoryItems, ...response.items]);
     const nextTotal = Math.max(response.total, nextItems.length);
     set({
       stockHistoryItems: nextItems,
