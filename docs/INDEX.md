@@ -69,3 +69,5 @@
 | [英文文档索引](INDEX_EN.md) | English documentation index |
 | [英文 README](README_EN.md) | English project overview and quick start |
 | [繁中 README](README_CHT.md) | 繁體中文項目概覽與快速開始 |
+| [日文 README](README_JA.md) | 日本語のプロジェクト概要とクイックスタート；详细文档暂导向英文版 |
+| [韩文 README](README_KO.md) | 한국어 프로젝트 개요와 빠른 시작；详细文档暂导向英文版 |
