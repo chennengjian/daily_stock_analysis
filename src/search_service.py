@@ -2190,6 +2190,10 @@ class SearchService:
         "安卓版", "苹果版", "官方版", "最新版", "version", "developer",
         "package", "mobile app",
     )
+    _LOW_QUALITY_APP_PAGE_DETAIL_TERMS = (
+        "客户端", "安卓版", "苹果版", "官方版", "最新版", "应用商店",
+        "下载安装到手机", "一键下载", "旧版下载", "极速版下载",
+    )
     _LOW_QUALITY_FILE_SIZE_RE = re.compile(r"\b\d+(?:\.\d+)?\s*(?:kb|mb|gb)\b", re.IGNORECASE)
     _LOW_QUALITY_RATING_RE = re.compile(
         r"(?:\d{1,3}\s*%\s*好评|好评率|用户评分|"
@@ -2237,7 +2241,7 @@ class SearchService:
         re.IGNORECASE,
     )
     _ADULT_SERVICE_SPAM_CONTACT_CONTEXT_TERMS = (
-        "小姐", "按摩", "保健", "足浴", "桑拿", "会所", "技师",
+        "小姐", "上门", "同城", "预约",
         "全套", "包夜", "大保健", "推油",
         "约炮", "援交", "成人", "色情",
     )
@@ -2813,6 +2817,10 @@ class SearchService:
             content_text,
             cls._LOW_QUALITY_DOWNLOAD_INTENT_TERMS,
         )
+        has_app_page_detail = cls._contains_any_low_quality_news_term(
+            content_text,
+            cls._LOW_QUALITY_APP_PAGE_DETAIL_TERMS,
+        )
         has_file_size = bool(cls._LOW_QUALITY_FILE_SIZE_RE.search(content_text))
         has_rating = bool(cls._LOW_QUALITY_RATING_RE.search(content_text))
         has_url_signal = bool(cls._LOW_QUALITY_URL_RE.search(url_surface))
@@ -2851,7 +2859,7 @@ class SearchService:
         has_content_download_page = (
             not has_business_app_metric_only
             and (
-                has_download_intent
+                (has_download_intent and (has_app_page_detail or has_file_size or has_rating))
                 or (has_download_action and (has_app_metadata or has_file_size))
             )
         )
@@ -2885,11 +2893,6 @@ class SearchService:
         ):
             return True
         has_contact_signal = bool(cls._ADULT_SERVICE_SPAM_CONTACT_RE.search(combined_text))
-        if has_contact_signal and cls._contains_any_news_term(
-            combined_text,
-            cls._ADULT_SERVICE_SPAM_CONTACT_CONTEXT_TERMS,
-        ):
-            return True
         has_remediation_context = cls._contains_any_news_term(
             combined_text,
             cls._ADULT_SERVICE_REMEDIATION_TERMS,
@@ -2922,6 +2925,11 @@ class SearchService:
                 "大保健", "莞式", "推油", "成人", "色情",
             ),
         )
+        if has_contact_signal:
+            return has_adult_specific_anchor and cls._contains_any_news_term(
+                combined_text,
+                cls._ADULT_SERVICE_SPAM_CONTACT_CONTEXT_TERMS,
+            )
         has_solicitation_signal = cls._contains_any_news_term(
             combined_text,
             cls._ADULT_SERVICE_SOLICITATION_TERMS,

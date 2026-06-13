@@ -557,6 +557,33 @@ class SearchNewsFreshnessTestCase(unittest.TestCase):
 
         self.assertEqual([item.title for item in resp.results], ["腾讯控股 00700 发布回购公告"])
 
+    def test_package_security_news_does_not_trigger_download_filter(self) -> None:
+        """Bare package wording in product/security news should not look like a download page."""
+        fresh = datetime.now().date().isoformat()
+        service, _ = self._create_service_with_mock_provider(
+            news_max_age_days=3,
+            news_strategy_profile="short",
+            response=_response(
+                [
+                    _result(
+                        "金山办公 688111 WPS 安装包被曝漏洞",
+                        fresh,
+                        snippet="公司回应 WPS 安装包安全漏洞并发布修复计划。",
+                        url="https://finance.example.invalid/news/688111-security",
+                        source="finance.example.invalid",
+                    )
+                ]
+            ),
+        )
+
+        resp = service.search_stock_news("688111", "金山办公", max_results=1)
+
+        self.assertEqual(
+            [item.title for item in resp.results],
+            ["金山办公 688111 WPS 安装包被曝漏洞"],
+        )
+        self.assertEqual(resp.results[0].relevance_category, "direct_company_news")
+
     def test_rich_media_client_phrase_in_ticker_news_is_not_filtered(self) -> None:
         """Client wording used in normal headline styles should not be treated as download spam."""
         fresh = datetime.now().date().isoformat()
@@ -1195,6 +1222,33 @@ class SearchNewsFreshnessTestCase(unittest.TestCase):
         resp = service.search_stock_news("00700.HK", "腾讯控股", max_results=1)
 
         self.assertEqual([item.title for item in resp.results], ["腾讯控股 00700 发布回购公告"])
+
+    def test_healthcare_phone_contact_news_does_not_trigger_adult_spam_filter(self) -> None:
+        """Normal phone contacts plus healthcare category wording are not adult-service spam."""
+        fresh = datetime.now().date().isoformat()
+        service, _ = self._create_service_with_mock_provider(
+            news_max_age_days=3,
+            news_strategy_profile="short",
+            response=_response(
+                [
+                    _result(
+                        "汤臣倍健 300146 保健品业务增长 联系电话02012345678",
+                        fresh,
+                        snippet="公司保健品业务增长，投资者联系电话02012345678。",
+                        url="https://finance.example.invalid/news/300146-healthcare",
+                        source="finance.example.invalid",
+                    )
+                ]
+            ),
+        )
+
+        resp = service.search_stock_news("300146", "汤臣倍健", max_results=1)
+
+        self.assertEqual(
+            [item.title for item in resp.results],
+            ["汤臣倍健 300146 保健品业务增长 联系电话02012345678"],
+        )
+        self.assertEqual(resp.results[0].relevance_category, "direct_company_news")
 
     def test_content_moderation_pornography_phrase_does_not_trigger_adult_spam_filter(self) -> None:
         """Content-safety/regulatory news can mention 色情 without being adult-service spam."""
