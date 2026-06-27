@@ -67,6 +67,7 @@ Market Light / 告警：
 - Market Light 快照和 Market Light 告警仍只支持 `cn` / `hk` / `us`。
 - Web 告警市场下拉不展示 `jp` / `kr`；后端 `normalize_market_region()` 对 `jp` / `kr` 返回显式 unsupported 错误。
 - JP/KR 大盘复盘 v1 可生成报告和结构化 market review payload，但不等价于完整 Market Light 风控信号。
+- 该轮边界收敛不改动 LLM Provider / Model / Base URL 的持久化语义，也不执行默认模型、运行时配置清理或回写；如需回滚，仅需恢复提交前 `.env` 与相关配置快照，并回退该功能提交。
 
 回滚方式：移除 Portfolio snapshot 的 `data_quality` / `limitations` 扩展，并恢复告警前端/后端对市场枚举的旧边界说明。
 

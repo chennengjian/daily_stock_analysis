@@ -2940,6 +2940,38 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertIn("主模型 / Agent 主模型 / Vision 模型 / 备选模型中的失效项", warning)
         self.assertIn("桌面端导出备份", warning)
 
+    def test_update_market_review_region_does_not_trigger_runtime_model_cleanup(self) -> None:
+        self._rewrite_env(
+            "MARKET_REVIEW_REGION=cn",
+            "LITELLM_MODEL=openai/gpt-4o-mini",
+            "AGENT_LITELLM_MODEL=deepseek/deepseek-chat",
+            "LITELLM_FALLBACK_MODELS=openai/gpt-4o-mini,deepseek/deepseek-v4-pro",
+            "VISION_MODEL=openai/gpt-4-vision",
+            "OPENAI_BASE_URL=https://openai.example.com/v1",
+            "OPENAI_MODEL=gpt-4.1",
+            "ANTHROPIC_MODEL=claude-sonnet-4-6",
+        )
+
+        response = self.service.update(
+            config_version=self.manager.get_config_version(),
+            items=[{"key": "MARKET_REVIEW_REGION", "value": "both"}],
+            reload_now=False,
+        )
+
+        self.assertTrue(response["success"])
+        self.assertIn("MARKET_REVIEW_REGION", response["updated_keys"])
+        current_map = self.manager.read_config_map()
+        self.assertEqual(current_map["MARKET_REVIEW_REGION"], "both")
+        self.assertEqual(current_map["LITELLM_MODEL"], "openai/gpt-4o-mini")
+        self.assertEqual(current_map["AGENT_LITELLM_MODEL"], "deepseek/deepseek-chat")
+        self.assertEqual(current_map["LITELLM_FALLBACK_MODELS"], "openai/gpt-4o-mini,deepseek/deepseek-v4-pro")
+        self.assertEqual(current_map["VISION_MODEL"], "openai/gpt-4-vision")
+        self.assertEqual(current_map["OPENAI_BASE_URL"], "https://openai.example.com/v1")
+        self.assertFalse(
+            any("已同步清理失效的运行时模型引用" in warning for warning in response["warnings"]),
+            response["warnings"],
+        )
+
     def test_import_desktop_env_restores_runtime_models_after_cleanup(self) -> None:
         self._rewrite_env(
             "STOCK_LIST=600519,000001",
